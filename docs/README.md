@@ -8,11 +8,16 @@ When you click a PR node, you can:
 - focus that PR in the canvas
 - open the PR on GitHub
 
+Routes are shareable:
+- `/:owner/:repo` loads a repository graph.
+- `/:owner/:repo/:branch` loads the repo and focuses a PR by head branch.
+
 ## Stack
 
 - Runtime: Bun
 - API server: Hono
 - UI: React + React Flow (`@xyflow/react`)
+- Routing: TanStack Router (`@tanstack/react-router`)
 - Tests: Bun test runner
 
 ## What It Shows
