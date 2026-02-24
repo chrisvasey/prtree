@@ -4,12 +4,12 @@ import { ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './styles.css';
 
-import App from './App';
+import { AppRouterProvider } from './router';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ReactFlowProvider>
-      <App />
+      <AppRouterProvider />
     </ReactFlowProvider>
   </StrictMode>
 );
