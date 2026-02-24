@@ -21,6 +21,9 @@ type LayoutMode = 'horizontal' | 'vertical';
 const EXAMPLE_REPOS = ['facebook/react', 'oven-sh/bun', 'vercel/next.js', 'microsoft/TypeScript'];
 const HORIZONTAL_GAP = 430;
 const VERTICAL_GAP = 170;
+const REPO_NODE_WIDTH = 280;
+const PR_NODE_WIDTH = 360;
+const NODE_HEIGHT = 72;
 
 function filterGraphByFocusedPr(
   nodes: GraphNode[],
@@ -208,7 +211,17 @@ function toReactFlowNodes(nodes: GraphNode[], layoutMode: LayoutMode): Node[] {
           background: '#ccfbf1',
           color: '#042f2e',
           fontWeight: 700,
-          width: 260
+          width: REPO_NODE_WIDTH,
+          height: NODE_HEIGHT,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          whiteSpace: 'normal',
+          lineHeight: 1.25,
+          textAlign: 'center',
+          wordBreak: 'break-word',
+          overflow: 'hidden',
+          padding: '0 12px'
         },
         ...handlePositions
       };
@@ -227,8 +240,16 @@ function toReactFlowNodes(nodes: GraphNode[], layoutMode: LayoutMode): Node[] {
         border: `1px solid ${pr.state === 'open' ? '#15803d' : '#9ca3af'}`,
         background: pr.state === 'open' ? '#f0fdf4' : '#f8fafc',
         color: '#0f172a',
-        width: 300,
-        padding: '10px 12px',
+        width: PR_NODE_WIDTH,
+        height: NODE_HEIGHT,
+        padding: '8px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        whiteSpace: 'normal',
+        lineHeight: 1.25,
+        wordBreak: 'break-word',
+        overflow: 'hidden',
         boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)'
       },
       ...handlePositions
@@ -241,7 +262,7 @@ function toReactFlowEdges(edges: GraphResponse['edges']): Edge[] {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: 'smoothstep',
+    type: 'straight',
     animated: false,
     style: {
       stroke: '#64748b',
