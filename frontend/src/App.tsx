@@ -425,8 +425,8 @@ export default function App() {
     visibleGraph.edges
   ]);
 
-  const loadGraph = useCallback(async () => {
-    const normalizedRepo = repo.trim();
+  const loadGraph = useCallback(async (repoOverride?: string) => {
+    const normalizedRepo = (repoOverride ?? repo).trim();
     if (!normalizedRepo) {
       setError('Enter a repository in owner/repo format and press Go.');
       return;
@@ -622,20 +622,37 @@ export default function App() {
 
       <main className={`grid min-h-0 ${showSidebar ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
         <section className="relative min-h-0">
+          {loading ? (
+            <div
+              className="absolute inset-4 z-20 flex items-center justify-center rounded-xl border border-slate-300/70 bg-white/70 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-950/70"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-center gap-3 rounded-lg bg-white/85 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-900/85 dark:text-slate-200">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600 dark:border-slate-600 dark:border-t-teal-400" />
+                Loading {repo.trim() || 'repository'}...
+              </div>
+            </div>
+          ) : null}
+
           {showInitialState ? (
-            <div className="absolute inset-4 z-10 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-400/70 bg-white/75 p-4 text-center backdrop-blur-sm dark:border-slate-600 dark:bg-slate-900/75">
-              <h2 className="m-0 text-2xl font-semibold tracking-tight">Choose a Repository</h2>
-              <p className="m-0 text-slate-600 dark:text-slate-300">Enter an `owner/repo`, pick an example, then press Go.</p>
-              <label className="grid gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="absolute inset-4 z-10 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-slate-400/70 bg-white/75 px-6 py-8 text-center backdrop-blur-sm dark:border-slate-600 dark:bg-slate-900/75">
+              <h2 className="m-0 text-4xl font-semibold tracking-tight sm:text-5xl">Choose a Repository</h2>
+              <p className="m-0 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
+                Enter an <span className="font-mono text-base">owner/repo</span>, pick an example, or type your own.
+              </p>
+              <label className="grid w-full max-w-[520px] gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
                 <span>Examples</span>
                 <select
-                  className={`${selectClass} min-w-[260px]`}
+                  className={`${selectClass} h-11 w-full min-w-0 text-base`}
                   value={exampleRepo}
+                  disabled={loading}
                   onChange={(event) => {
                     const value = event.target.value;
                     setExampleRepo(value);
                     if (value) {
                       setRepo(value);
+                      void loadGraph(value);
                     }
                   }}
                 >
