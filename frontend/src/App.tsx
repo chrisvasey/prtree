@@ -363,6 +363,7 @@ export default function App() {
   }, [rawNodes]);
 
   const selected = selectedNodeId ? nodeById.get(selectedNodeId) : undefined;
+  const showSidebar = Boolean(selected);
   const rootNodeId = useMemo(() => rawNodes.find((node) => node.type === 'repo')?.id ?? null, [rawNodes]);
   const showInitialState = !hasLoadedGraph && !loading && rawNodes.length === 0;
   const focusedPr = useMemo(() => {
@@ -619,7 +620,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="grid min-h-0 grid-cols-1 lg:grid-cols-[1fr_320px]">
+      <main className={`grid min-h-0 ${showSidebar ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
         <section className="relative min-h-0">
           {showInitialState ? (
             <div className="absolute inset-4 z-10 flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-400/70 bg-white/75 p-4 text-center backdrop-blur-sm dark:border-slate-600 dark:bg-slate-900/75">
@@ -682,10 +683,9 @@ export default function App() {
           </ReactFlow>
         </section>
 
-        <aside className="overflow-y-auto border-t border-slate-300/80 bg-white/85 p-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-950/70 lg:border-t-0 lg:border-l">
-          {!selected ? (
-            <div className="text-sm text-slate-600 dark:text-slate-300">Select a node to focus it or open its PR.</div>
-          ) : selected.type === 'repo' ? (
+        {selected ? (
+          <aside className="overflow-y-auto border-t border-slate-300/80 bg-white/85 p-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-950/70 lg:border-t-0 lg:border-l">
+            {selected.type === 'repo' ? (
             <div>
               <h2 className="m-0 mb-3 text-lg font-semibold">{selected.data.label}</h2>
               <button className={primaryButtonClass} onClick={focusSelected}>
@@ -715,8 +715,9 @@ export default function App() {
                 </button>
               </div>
             </div>
-          )}
-        </aside>
+            )}
+          </aside>
+        ) : null}
       </main>
     </div>
   );
