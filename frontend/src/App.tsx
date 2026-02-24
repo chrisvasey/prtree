@@ -396,22 +396,42 @@ export default function App() {
     setSelectedNodeId(node.id);
   }, []);
 
+  const focusNodeById = useCallback(
+    (nodeId: string) => {
+      const node = nodeById.get(nodeId);
+      if (!node) {
+        return;
+      }
+
+      setSelectedNodeId(nodeId);
+
+      if (node.type === 'pr') {
+        setFocusedPrId(nodeId);
+        setPendingFitNodeId(null);
+        setPendingFitGraph(true);
+        return;
+      }
+
+      setFocusedPrId(null);
+      setPendingFitNodeId(nodeId);
+      setPendingFitGraph(false);
+    },
+    [nodeById]
+  );
+
+  const onNodeDoubleClick = useCallback<NodeMouseHandler>(
+    (_event, node) => {
+      focusNodeById(node.id);
+    },
+    [focusNodeById]
+  );
+
   const focusSelected = useCallback(() => {
-    if (!selected) {
+    if (!selected?.id) {
       return;
     }
-
-    if (selected.type === 'pr') {
-      setFocusedPrId(selected.id);
-      setPendingFitNodeId(null);
-      setPendingFitGraph(true);
-      return;
-    }
-
-    setFocusedPrId(null);
-    setPendingFitNodeId(selected.id);
-    setPendingFitGraph(false);
-  }, [selected]);
+    focusNodeById(selected.id);
+  }, [focusNodeById, selected]);
 
   const openSelectedPullRequest = useCallback(() => {
     if (!selected || selected.type !== 'pr') {
@@ -530,6 +550,7 @@ export default function App() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
             fitView
           >
             <MiniMap pannable zoomable />
