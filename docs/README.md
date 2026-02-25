@@ -5,12 +5,31 @@ A Bun + Hono + React Flow visualizer for GitHub pull-request trees.
 Given a repository (`owner/repo`), it fetches pull requests and builds a graph showing how PRs branch from the repository root and from each other (stacked PR chains).
 
 When you click a PR node, you can:
+- select it in the canvas
 - focus that PR in the canvas
 - open the PR on GitHub
+
+When you double-click a PR node, the app updates the route and focuses that PR branch.
 
 Routes are shareable:
 - `/:owner/:repo` loads a repository graph.
 - `/:owner/:repo/:branch` loads the repo and focuses a PR by head branch.
+
+## UI Controls
+
+The top toolbar includes:
+- `Repo` input
+- `State` filter (`open`, `closed`, `all`)
+- `Layout` switch (`horizontal`, `vertical`)
+- `Go` to load the graph for the current repo
+- PR search dropdown input that searches visible PRs and focuses the selected PR
+- `Focus Root` and `Unfocus`
+- `Refresh` (reloads data for current repo/state without changing route focus)
+- Theme toggle
+
+Notes:
+- Focusing/unfocusing a PR via route changes does not trigger a full data reload when repo/state are unchanged.
+- Status text above the canvas shows pull count and current focus only when data is present.
 
 ## Stack
 
@@ -146,3 +165,4 @@ The test suite covers:
 
 - GitHub branch names are matched exactly when detecting stacked relationships (`base.ref` vs `head.ref`).
 - If multiple parent candidates exist for a base branch, the most recently updated PR is chosen.
+- Refresh keeps current selection/focus when the same node still exists in refreshed data.
