@@ -29,6 +29,7 @@ import { getInitialTheme, THEME_STORAGE_KEY } from './lib/theme';
 import type { GraphNode, GraphResponse } from './types';
 
 const EXAMPLE_REPOS = ['facebook/react', 'oven-sh/bun', 'vercel/next.js', 'microsoft/TypeScript'];
+const MIN_AUTO_FIT_ZOOM = 0.62;
 
 interface AppProps {
   routeRepo: string | null;
@@ -138,7 +139,12 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
       }
 
       if (pendingFitGraph) {
-        reactFlow.fitView({ padding: 0.24, duration: 350 });
+        reactFlow.fitView({
+          padding: 0.24,
+          duration: 350,
+          minZoom: MIN_AUTO_FIT_ZOOM,
+          maxZoom: 1
+        });
         setPendingFitGraph(false);
       }
     });
@@ -453,7 +459,7 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
           <ReactFlow
             className="bg-white/30 dark:bg-slate-950/30"
             colorMode={themeMode}
-            minZoom={0.1}
+            minZoom={0.25}
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
@@ -461,6 +467,7 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
             onNodeClick={onNodeClick}
             onNodeDoubleClick={onNodeDoubleClick}
             fitView
+            fitViewOptions={{ padding: 0.24, minZoom: MIN_AUTO_FIT_ZOOM, maxZoom: 1 }}
           >
             <MiniMap
               pannable

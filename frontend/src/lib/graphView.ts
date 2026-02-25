@@ -6,8 +6,8 @@ import type { GraphNode, GraphResponse } from '../types';
 export type LayoutMode = 'horizontal' | 'vertical';
 export type ThemeMode = 'light' | 'dark';
 
-const HORIZONTAL_GAP = 430;
-const VERTICAL_GAP = 170;
+const HORIZONTAL_GAP = 640;
+const VERTICAL_GAP = 320;
 const REPO_NODE_WIDTH = 280;
 const PR_NODE_WIDTH = 420;
 const NODE_HEIGHT = 92;
@@ -266,7 +266,8 @@ export function toReactFlowNodes(nodes: GraphNode[], layoutMode: LayoutMode, the
             'div',
             {
               style: {
-                minWidth: 0
+                minWidth: 0,
+                textAlign: 'left'
               }
             },
             createElement(
@@ -314,6 +315,7 @@ export function toReactFlowNodes(nodes: GraphNode[], layoutMode: LayoutMode, the
         justifyContent: 'flex-start',
         whiteSpace: 'normal',
         lineHeight: 1.25,
+        textAlign: 'left',
         wordBreak: 'break-word',
         overflow: 'hidden',
         boxShadow: isDark ? '0 14px 26px rgba(2, 6, 23, 0.45)' : '0 10px 24px rgba(15, 23, 42, 0.08)'
