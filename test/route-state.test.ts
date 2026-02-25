@@ -29,6 +29,10 @@ const sampleNodes: GraphNode[] = [
       url: 'https://github.com/acme/repo/pull/10',
       headRef: 'feature/base',
       baseRef: 'main',
+      authorLogin: 'alice',
+      authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+      openedAt: '2026-02-18T10:00:00Z',
+      subscription: 'subscribed',
       draft: false
     }
   },
@@ -43,6 +47,10 @@ const sampleNodes: GraphNode[] = [
       url: 'https://github.com/acme/repo/pull/11',
       headRef: 'feature/child',
       baseRef: 'feature/base',
+      authorLogin: 'bob',
+      authorAvatarUrl: 'https://avatars.githubusercontent.com/u/2?v=4',
+      openedAt: '2026-02-18T11:00:00Z',
+      subscription: 'not-subscribed',
       draft: false
     }
   }

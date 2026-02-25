@@ -10,8 +10,14 @@ interface GitHubPullRequestApiItem {
   title: string;
   state: PullRequestState;
   html_url: string;
+  created_at: string;
   updated_at: string;
   draft: boolean;
+  subscribed?: boolean | null;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
   head: {
     ref: string;
   };
@@ -30,6 +36,9 @@ function parseRepo(repo: string): { owner: string; name: string } {
 }
 
 function toPullRequestSummary(item: GitHubPullRequestApiItem): PullRequestSummary {
+  const subscription =
+    item.subscribed === true ? 'subscribed' : item.subscribed === false ? 'not-subscribed' : 'unknown';
+
   return {
     number: item.number,
     title: item.title,
@@ -37,6 +46,10 @@ function toPullRequestSummary(item: GitHubPullRequestApiItem): PullRequestSummar
     url: item.html_url,
     headRef: item.head.ref,
     baseRef: item.base.ref,
+    authorLogin: item.user.login,
+    authorAvatarUrl: item.user.avatar_url,
+    openedAt: item.created_at,
+    subscription,
     updatedAt: item.updated_at,
     draft: item.draft
   };

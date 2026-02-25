@@ -18,6 +18,10 @@ export interface GraphNode {
         url: string;
         headRef: string;
         baseRef: string;
+        authorLogin: string;
+        authorAvatarUrl: string;
+        openedAt: string;
+        subscription: 'subscribed' | 'not-subscribed' | 'unknown';
         draft: boolean;
       };
 }

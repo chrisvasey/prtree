@@ -11,6 +11,10 @@ const pulls: PullRequestSummary[] = [
     url: 'https://github.com/acme/repo/pull/7',
     headRef: 'feature/example',
     baseRef: 'main',
+    authorLogin: 'octocat',
+    authorAvatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+    openedAt: '2026-02-18T08:00:00Z',
+    subscription: 'subscribed',
     updatedAt: '2026-02-20T10:00:00Z',
     draft: false
   }

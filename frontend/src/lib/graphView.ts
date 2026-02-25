@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { Position, type Edge, type Node } from '@xyflow/react';
 
 import type { GraphNode, GraphResponse } from '../types';
@@ -8,8 +9,21 @@ export type ThemeMode = 'light' | 'dark';
 const HORIZONTAL_GAP = 430;
 const VERTICAL_GAP = 170;
 const REPO_NODE_WIDTH = 280;
-const PR_NODE_WIDTH = 360;
-const NODE_HEIGHT = 72;
+const PR_NODE_WIDTH = 420;
+const NODE_HEIGHT = 92;
+
+function formatOpenedAt(openedAt: string): string {
+  const parsedDate = new Date(openedAt);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return openedAt;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }).format(parsedDate);
+}
 
 export function filterGraphByFocusedPr(
   nodes: GraphNode[],
@@ -226,7 +240,66 @@ export function toReactFlowNodes(nodes: GraphNode[], layoutMode: LayoutMode, the
       id: node.id,
       position: node.position,
       data: {
-        label: `#${pr.number} ${pr.title}`
+        label: createElement(
+          'div',
+          {
+            style: {
+              display: 'grid',
+              gridTemplateColumns: '34px minmax(0, 1fr)',
+              gap: '10px',
+              alignItems: 'center',
+              width: '100%'
+            }
+          },
+          createElement('img', {
+            src: pr.authorAvatarUrl,
+            alt: pr.authorLogin,
+            width: 34,
+            height: 34,
+            style: {
+              borderRadius: '9999px',
+              border: `1px solid ${isDark ? '#334155' : '#cbd5e1'}`,
+              objectFit: 'cover'
+            }
+          }),
+          createElement(
+            'div',
+            {
+              style: {
+                minWidth: 0
+              }
+            },
+            createElement(
+              'div',
+              {
+                style: {
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical' as const
+                }
+              },
+              `#${pr.number} ${pr.title}`
+            ),
+            createElement(
+              'div',
+              {
+                style: {
+                  marginTop: 4,
+                  fontSize: 12,
+                  opacity: 0.86,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }
+              },
+              `@${pr.authorLogin} opened ${formatOpenedAt(pr.openedAt)}`
+            )
+          )
+        )
       },
       style: {
         borderRadius: 10,

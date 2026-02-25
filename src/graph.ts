@@ -145,6 +145,10 @@ export function buildPullRequestGraph(repo: string, pullRequests: PullRequestSum
         url: pr.url,
         headRef: pr.headRef,
         baseRef: pr.baseRef,
+        authorLogin: pr.authorLogin,
+        authorAvatarUrl: pr.authorAvatarUrl,
+        openedAt: pr.openedAt,
+        subscription: pr.subscription,
         draft: pr.draft
       }
     });

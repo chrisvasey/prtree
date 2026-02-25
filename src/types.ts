@@ -9,6 +9,10 @@ export interface PullRequestSummary {
   url: string;
   headRef: string;
   baseRef: string;
+  authorLogin: string;
+  authorAvatarUrl: string;
+  openedAt: string;
+  subscription: 'subscribed' | 'not-subscribed' | 'unknown';
   updatedAt: string;
   draft: boolean;
 }
@@ -38,6 +42,10 @@ export interface PullRequestNode {
     url: string;
     headRef: string;
     baseRef: string;
+    authorLogin: string;
+    authorAvatarUrl: string;
+    openedAt: string;
+    subscription: 'subscribed' | 'not-subscribed' | 'unknown';
     draft: boolean;
   };
 }
