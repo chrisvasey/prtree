@@ -77,6 +77,7 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
   const [hasLoadedGraph, setHasLoadedGraph] = useState(false);
   const [pullCount, setPullCount] = useState(0);
   const [loadedRepo, setLoadedRepo] = useState<string | null>(routeRepo);
+  const [loadedStateFilter, setLoadedStateFilter] = useState<'open' | 'closed' | 'all' | null>(null);
   const [rawNodes, setRawNodes] = useState<GraphNode[]>([]);
   const [rawEdges, setRawEdges] = useState<GraphResponse['edges']>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -291,18 +292,23 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
         const hasPreservedFocusedPr = preservedFocusedPrId
           ? graph.nodes.some((node) => node.id === preservedFocusedPrId && node.type === 'pr')
           : false;
+        const hasRouteFocusedPr = routeFocusedNodeId
+          ? graph.nodes.some((node) => node.id === routeFocusedNodeId && node.type === 'pr')
+          : false;
+        const shouldFitRouteFocusedPr = Boolean(options?.routeFocusParam && hasRouteFocusedPr);
         const nextFocusedPrId = hasPreservedFocusedPr ? preservedFocusedPrId : routeFocusedNodeId;
         const nextSelectedNodeId = hasPreservedSelectedNode ? preservedSelectedNodeId : nextFocusedPrId;
 
         setLoadedRepo(graph.repo);
+        setLoadedStateFilter(targetState);
         setRepo(graph.repo);
         setRawNodes(graph.nodes);
         setRawEdges(graph.edges);
         setPullCount(graph.pullCount);
         setSelectedNodeId(nextSelectedNodeId);
         setFocusedPrId(nextFocusedPrId);
-        setPendingFitNodeId(null);
-        setPendingFitGraph(true);
+        setPendingFitNodeId(shouldFitRouteFocusedPr ? routeFocusedNodeId : null);
+        setPendingFitGraph(!shouldFitRouteFocusedPr);
         setHasLoadedGraph(true);
       } catch (fetchError) {
         if (requestId !== requestIdRef.current) {
@@ -312,6 +318,7 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
         const message = fetchError instanceof Error ? fetchError.message : 'Unknown error while loading graph.';
         setError(message);
         setLoadedRepo(null);
+        setLoadedStateFilter(null);
         resetGraphState(
           setRawNodes,
           setRawEdges,
@@ -337,14 +344,20 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     }
 
     setRepo(routeRepo);
+    const needsReload = !hasLoadedGraph || loadedRepo !== routeRepo || loadedStateFilter !== stateFilter;
+    if (!needsReload) {
+      return;
+    }
+
     void loadGraph(routeRepo, stateFilter, { routeFocusParam: routeFocus });
-  }, [loadGraph, routeFocus, routeRepo, stateFilter]);
+  }, [hasLoadedGraph, loadGraph, loadedRepo, loadedStateFilter, routeFocus, routeRepo, stateFilter]);
 
   useEffect(() => {
     if (!routeRepo) {
       requestIdRef.current += 1;
       setRepo('');
       setLoadedRepo(null);
+      setLoadedStateFilter(null);
       setError(null);
       setHasLoadedGraph(false);
       resetGraphState(
@@ -374,8 +387,8 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     if (focusedPrId !== focusNodeId) {
       setSelectedNodeId(focusNodeId);
       setFocusedPrId(focusNodeId);
-      setPendingFitNodeId(null);
-      setPendingFitGraph(true);
+      setPendingFitNodeId(focusNodeId);
+      setPendingFitGraph(false);
     }
   }, [focusedPrId, rawNodes, routeFocus]);
 
