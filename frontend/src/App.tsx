@@ -37,6 +37,12 @@ interface AppProps {
   navigateToRepo: (repo: string, focus?: string | null) => void;
 }
 
+interface LoadGraphOptions {
+  preserveSelectedNodeId?: string | null;
+  preserveFocusedPrId?: string | null;
+  routeFocusParam?: string | null;
+}
+
 function resetGraphState(
   setRawNodes: (nodes: GraphNode[]) => void,
   setRawEdges: (edges: GraphResponse['edges']) => void,
@@ -58,6 +64,8 @@ function resetGraphState(
 export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps) {
   const reactFlow = useReactFlow();
   const requestIdRef = useRef(0);
+  const fitRafRef = useRef<number | null>(null);
+  const fitRetryRafRef = useRef<number | null>(null);
 
   const [repo, setRepo] = useState(routeRepo ?? '');
   const [exampleRepo, setExampleRepo] = useState('');
@@ -88,7 +96,8 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
 
   const nodeById = useMemo(() => new Map(rawNodes.map((node) => [node.id, node])), [rawNodes]);
   const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) : undefined;
-  const rootNodeId = useMemo(() => rawNodes.find((node) => node.type === 'repo')?.id ?? null, [rawNodes]);
+  const rootNode = useMemo(() => rawNodes.find((node) => node.type === 'repo') ?? null, [rawNodes]);
+  const rootNodeId = rootNode?.id ?? null;
 
   const focusedPr = useMemo(() => {
     if (!focusedPrId) {
@@ -104,12 +113,63 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     [focusedPrId, rawEdges, rawNodes]
   );
 
+  const visiblePrOptions = useMemo(
+    () =>
+      visibleGraph.nodes
+        .filter((node): node is GraphNode & { type: 'pr' } => node.type === 'pr')
+        .sort((left, right) => left.data.number - right.data.number)
+        .map((node) => ({
+          id: node.id,
+          label: `#${node.data.number} ${node.data.title}`
+        })),
+    [visibleGraph.nodes]
+  );
+
   const positionedNodes = useMemo(
     () => positionGraph(visibleGraph.nodes, visibleGraph.edges, layoutMode),
     [layoutMode, visibleGraph.edges, visibleGraph.nodes]
   );
 
   const activeRepo = loadedRepo ?? routeRepo ?? null;
+
+  const focusedLabel = useMemo(() => {
+    if (focusedPr) {
+      return `Focusing: PR #${focusedPr.data.number} ${focusedPr.data.title}`;
+    }
+
+    if (rootNode) {
+      return `Focusing: Repo ${rootNode.data.label}`;
+    }
+
+    return null;
+  }, [focusedPr, rootNode]);
+
+  useEffect(() => {
+    const trimmedRepo = repo.trim();
+    const titleRepo = activeRepo ?? (trimmedRepo || null);
+
+    if (loading) {
+      document.title = titleRepo ? `Loading ${titleRepo} · prtree` : 'Loading · prtree';
+      return;
+    }
+
+    if (focusedPr && titleRepo) {
+      document.title = `Focusing: PR #${focusedPr.data.number} · ${titleRepo} · prtree`;
+      return;
+    }
+
+    if (rootNode && titleRepo) {
+      document.title = `Focusing: Repo · ${titleRepo} · prtree`;
+      return;
+    }
+
+    if (titleRepo) {
+      document.title = `${titleRepo} · prtree`;
+      return;
+    }
+
+    document.title = 'prtree';
+  }, [activeRepo, focusedPr, loading, repo, rootNode]);
 
   useEffect(() => {
     if (positionedNodes.length === 0) {
@@ -121,7 +181,35 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     setNodes(toReactFlowNodes(positionedNodes, layoutMode, themeMode));
     setEdges(toReactFlowEdges(visibleGraph.edges, themeMode));
 
-    requestAnimationFrame(() => {
+    if (fitRafRef.current !== null) {
+      cancelAnimationFrame(fitRafRef.current);
+      fitRafRef.current = null;
+    }
+    if (fitRetryRafRef.current !== null) {
+      cancelAnimationFrame(fitRetryRafRef.current);
+      fitRetryRafRef.current = null;
+    }
+
+    fitRafRef.current = requestAnimationFrame(() => {
+      fitRafRef.current = null;
+
+      const fitGraph = (): void => {
+        const fitOptions = {
+          padding: 0.24,
+          duration: 350,
+          minZoom: MIN_AUTO_FIT_ZOOM,
+          maxZoom: 1
+        };
+
+        reactFlow.fitView(fitOptions);
+        fitRetryRafRef.current = requestAnimationFrame(() => {
+          fitRetryRafRef.current = null;
+          if (!reactFlow.fitView(fitOptions)) {
+            reactFlow.fitView(fitOptions);
+          }
+        });
+      };
+
       if (pendingFitNodeId) {
         const targetNode = reactFlow.getNode(pendingFitNodeId);
         if (targetNode) {
@@ -131,6 +219,8 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
             padding: 0.8,
             maxZoom: 1.3
           });
+        } else {
+          fitGraph();
         }
 
         setPendingFitNodeId(null);
@@ -139,15 +229,21 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
       }
 
       if (pendingFitGraph) {
-        reactFlow.fitView({
-          padding: 0.24,
-          duration: 350,
-          minZoom: MIN_AUTO_FIT_ZOOM,
-          maxZoom: 1
-        });
+        fitGraph();
         setPendingFitGraph(false);
       }
     });
+
+    return () => {
+      if (fitRafRef.current !== null) {
+        cancelAnimationFrame(fitRafRef.current);
+        fitRafRef.current = null;
+      }
+      if (fitRetryRafRef.current !== null) {
+        cancelAnimationFrame(fitRetryRafRef.current);
+        fitRetryRafRef.current = null;
+      }
+    };
   }, [
     layoutMode,
     pendingFitGraph,
@@ -161,7 +257,7 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
   ]);
 
   const loadGraph = useCallback(
-    async (targetRepo: string, targetState: 'open' | 'closed' | 'all') => {
+    async (targetRepo: string, targetState: 'open' | 'closed' | 'all', options?: LoadGraphOptions) => {
       const normalizedRepo = targetRepo.trim();
       if (!normalizedRepo) {
         setError('Enter a repository in owner/repo format and press Go.');
@@ -186,13 +282,25 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
         }
 
         const graph = payload as GraphResponse;
+        const preservedSelectedNodeId = options?.preserveSelectedNodeId ?? null;
+        const preservedFocusedPrId = options?.preserveFocusedPrId ?? null;
+        const routeFocusedNodeId = findFocusedNodeId(graph.nodes, options?.routeFocusParam ?? null);
+        const hasPreservedSelectedNode = preservedSelectedNodeId
+          ? graph.nodes.some((node) => node.id === preservedSelectedNodeId)
+          : false;
+        const hasPreservedFocusedPr = preservedFocusedPrId
+          ? graph.nodes.some((node) => node.id === preservedFocusedPrId && node.type === 'pr')
+          : false;
+        const nextFocusedPrId = hasPreservedFocusedPr ? preservedFocusedPrId : routeFocusedNodeId;
+        const nextSelectedNodeId = hasPreservedSelectedNode ? preservedSelectedNodeId : nextFocusedPrId;
+
         setLoadedRepo(graph.repo);
         setRepo(graph.repo);
         setRawNodes(graph.nodes);
         setRawEdges(graph.edges);
         setPullCount(graph.pullCount);
-        setSelectedNodeId(null);
-        setFocusedPrId(null);
+        setSelectedNodeId(nextSelectedNodeId);
+        setFocusedPrId(nextFocusedPrId);
         setPendingFitNodeId(null);
         setPendingFitGraph(true);
         setHasLoadedGraph(true);
@@ -229,8 +337,8 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     }
 
     setRepo(routeRepo);
-    void loadGraph(routeRepo, stateFilter);
-  }, [loadGraph, routeRepo, stateFilter]);
+    void loadGraph(routeRepo, stateFilter, { routeFocusParam: routeFocus });
+  }, [loadGraph, routeFocus, routeRepo, stateFilter]);
 
   useEffect(() => {
     if (!routeRepo) {
@@ -314,6 +422,26 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
     },
     [focusNodeById]
   );
+
+  const onPrSelectFromSearch = useCallback(
+    (nodeId: string) => {
+      focusNodeById(nodeId, true);
+    },
+    [focusNodeById]
+  );
+
+  const onRefresh = useCallback(() => {
+    const targetRepo = (activeRepo ?? repo).trim();
+    if (!targetRepo) {
+      setError('Enter a repository in owner/repo format and press Go.');
+      return;
+    }
+
+    void loadGraph(targetRepo, stateFilter, {
+      preserveSelectedNodeId: selectedNodeId,
+      preserveFocusedPrId: focusedPrId
+    });
+  }, [activeRepo, focusedPrId, loadGraph, repo, selectedNodeId, stateFilter]);
 
   const goToRepo = useCallback(
     (repoOverride?: string) => {
@@ -408,31 +536,52 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
 
   const showSidebar = Boolean(selectedNode);
   const showInitialState = !routeRepo && !hasLoadedGraph && !loading && rawNodes.length === 0;
-  const focusedLabel = focusedPr ? `Focusing #${focusedPr.data.number} ${focusedPr.data.title}` : null;
+  const showGraphStatus = !loading && pullCount > 0;
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] bg-[radial-gradient(circle_at_top,_#f8fafc_0%,_#eef2ff_42%,_#e2e8f0_100%)] text-slate-900 transition-colors dark:bg-[radial-gradient(circle_at_top,_#0f172a_0%,_#0b1120_42%,_#020617_100%)] dark:text-slate-100">
       <HeaderControls
         repo={repo}
-        pullCount={pullCount}
-        focusedLabel={focusedLabel}
         loading={loading}
-        error={error}
+        canRefresh={Boolean((activeRepo ?? repo).trim())}
         themeMode={themeMode}
         stateFilter={stateFilter}
         layoutMode={layoutMode}
         hasRoot={Boolean(rootNodeId)}
         hasFocusedPr={Boolean(focusedPr)}
+        prSearchOptions={visiblePrOptions}
         onRepoChange={setRepo}
         onStateFilterChange={setStateFilter}
         onLayoutModeChange={onLayoutModeChange}
+        onPrSelect={onPrSelectFromSearch}
         onGo={() => goToRepo()}
+        onRefresh={onRefresh}
         onToggleTheme={() => setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
         onFocusRoot={focusRoot}
         onUnfocus={unfocusGraph}
       />
 
-      <main className={`grid min-h-0 ${showSidebar ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
+      <main className={`relative grid min-h-0 ${showSidebar ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
+        {showGraphStatus || error ? (
+          <div className="pointer-events-none absolute left-3 top-2 z-30 flex max-w-[44rem] flex-col items-start gap-1 text-left">
+            {showGraphStatus ? (
+              <span className="rounded-md bg-white/85 px-2 py-1 text-sm text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200">
+                {pullCount} pull requests
+              </span>
+            ) : null}
+            {showGraphStatus && focusedLabel ? (
+              <span className="max-w-[44rem] truncate rounded-md bg-white/85 px-2 py-1 text-sm text-slate-700 shadow-sm backdrop-blur dark:bg-slate-900/85 dark:text-slate-200">
+                {focusedLabel}
+              </span>
+            ) : null}
+            {error ? (
+              <span className="max-w-[44rem] truncate rounded-md bg-rose-50/95 px-2 py-1 text-sm font-medium text-rose-700 shadow-sm backdrop-blur dark:bg-rose-950/60 dark:text-rose-300">
+                {error}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
         <section className="relative min-h-0">
           {loading ? (
             <div
