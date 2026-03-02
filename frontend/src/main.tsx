@@ -1,15 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './styles.css';
 
-import { AppRouterProvider } from './router';
+import { AuthGate } from './components/AuthGate';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ReactFlowProvider>
-      <AppRouterProvider />
-    </ReactFlowProvider>
+    <AuthGate />
   </StrictMode>
 );

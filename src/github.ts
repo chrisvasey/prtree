@@ -83,7 +83,7 @@ export function createGitHubPullRequestFetcher(token?: string): FetchPullRequest
         }
 
         if (response.status === 403) {
-          throw new Error('GitHub API rate limit hit. Provide GITHUB_TOKEN and retry.');
+          throw new Error('GitHub API rate limit hit. Try again later.');
         }
 
         throw new Error(`GitHub API request failed with status ${response.status}.`);

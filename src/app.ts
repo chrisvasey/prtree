@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { resolve, sep } from 'node:path';
 
+import { createAuthRoutes, getSessionAsync } from './auth';
 import { buildPullRequestGraph } from './graph';
 import { createGitHubPullRequestFetcher } from './github';
 import type { FetchPullRequests, PullRequestStateFilter } from './types';
@@ -11,7 +12,6 @@ const REPO_PATTERN = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
 
 interface AppOptions {
   fetchPullRequests?: FetchPullRequests;
-  githubToken?: string;
 }
 
 function isValidRepo(repo: string): boolean {
@@ -41,16 +41,37 @@ async function tryServePublic(path: string): Promise<Bun.BunFile | null> {
 }
 
 export function createApp(options: AppOptions = {}): Hono {
-  const fetchPullRequests =
-    options.fetchPullRequests ?? createGitHubPullRequestFetcher(options.githubToken ?? process.env.GITHUB_TOKEN);
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const sessionSecret = process.env.SESSION_SECRET;
+  const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000';
 
   const app = new Hono();
+
+  if (clientId && clientSecret && sessionSecret) {
+    app.route('/auth', createAuthRoutes(clientId, clientSecret, sessionSecret, baseUrl));
+  }
 
   app.use('/api/*', cors());
 
   app.get('/api/health', (c) => c.json({ ok: true }));
 
   app.get('/api/graph', async (c) => {
+    let fetchPullRequests: FetchPullRequests;
+
+    if (options.fetchPullRequests) {
+      // Test override — skip auth
+      fetchPullRequests = options.fetchPullRequests;
+    } else if (sessionSecret) {
+      const session = await getSessionAsync(c, sessionSecret);
+      if (!session) {
+        return c.json({ error: 'Authentication required.' }, 401);
+      }
+      fetchPullRequests = createGitHubPullRequestFetcher(session.githubToken);
+    } else {
+      return c.json({ error: 'OAuth not configured. Set GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and SESSION_SECRET.' }, 500);
+    }
+
     const repo = c.req.query('repo')?.trim() ?? '';
     if (!repo || !isValidRepo(repo)) {
       return c.json({ error: 'Query parameter repo is required in owner/repo format.' }, 400);
