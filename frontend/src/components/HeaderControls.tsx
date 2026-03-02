@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import type { AuthUser } from '../lib/auth';
 import type { LayoutMode, ThemeMode } from '../lib/graphView';
 import { primaryButtonClass, secondaryButtonClass } from '../ui/classes';
 
@@ -26,6 +27,8 @@ interface HeaderControlsProps {
   onToggleTheme: () => void;
   onFocusRoot: () => void;
   onUnfocus: () => void;
+  user: AuthUser;
+  onLogout: () => Promise<void>;
 }
 
 export function HeaderControls({
@@ -46,7 +49,9 @@ export function HeaderControls({
   onRefresh,
   onToggleTheme,
   onFocusRoot,
-  onUnfocus
+  onUnfocus,
+  user,
+  onLogout
 }: HeaderControlsProps) {
   const prListId = useId();
   const [searchInput, setSearchInput] = useState('');
@@ -166,6 +171,21 @@ export function HeaderControls({
         <button className={`${secondaryButtonClass} shrink-0 rounded-md px-3`} onClick={onToggleTheme}>
           {themeMode === 'dark' ? 'Light mode' : 'Dark mode'}
         </button>
+
+        <div className="flex shrink-0 items-center gap-2 border-l border-slate-200 pl-2 dark:border-slate-700">
+          <img
+            src={user.avatarUrl}
+            alt={user.login}
+            className="h-7 w-7 rounded-full"
+          />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{user.login}</span>
+          <button
+            className={`${secondaryButtonClass} shrink-0 rounded-md px-2 text-xs`}
+            onClick={() => void onLogout()}
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </header>
   );

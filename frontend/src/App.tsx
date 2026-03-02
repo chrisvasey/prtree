@@ -14,6 +14,7 @@ import {
 import { HeaderControls } from './components/HeaderControls';
 import { InitialStatePanel } from './components/InitialStatePanel';
 import { SelectedNodePanel } from './components/SelectedNodePanel';
+import type { AuthUser } from './lib/auth';
 import {
   filterGraphByFocusedPr,
   getMiniMapNodeColor,
@@ -35,6 +36,8 @@ interface AppProps {
   routeRepo: string | null;
   routeFocus: string | null;
   navigateToRepo: (repo: string, focus?: string | null) => void;
+  user: AuthUser;
+  onLogout: () => Promise<void>;
 }
 
 interface LoadGraphOptions {
@@ -61,7 +64,7 @@ function resetGraphState(
   setPendingFitGraph(false);
 }
 
-export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps) {
+export default function App({ routeRepo, routeFocus, navigateToRepo, user, onLogout }: AppProps) {
   const reactFlow = useReactFlow();
   const requestIdRef = useRef(0);
   const fitRafRef = useRef<number | null>(null);
@@ -275,6 +278,11 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
         const payload = (await response.json()) as GraphResponse | { error: string };
 
         if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        if (response.status === 401) {
+          window.location.href = '/auth/login';
           return;
         }
 
@@ -572,6 +580,8 @@ export default function App({ routeRepo, routeFocus, navigateToRepo }: AppProps)
         onToggleTheme={() => setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
         onFocusRoot={focusRoot}
         onUnfocus={unfocusGraph}
+        user={user}
+        onLogout={onLogout}
       />
 
       <main className={`relative grid min-h-0 ${showSidebar ? 'grid-cols-1 lg:grid-cols-[1fr_320px]' : 'grid-cols-1'}`}>
